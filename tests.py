@@ -140,3 +140,52 @@ def test_question_points_constraints():
     question2 = Question(title='q1', points=100)
     assert question1.points == 1
     assert question2.points == 100
+
+
+@pytest.fixture
+def questions():
+    question = Question(title='q1', max_selections=2)
+    question.add_choice('a', True)
+    question.add_choice('b', False)
+    question.add_choice('c', False)
+    question.add_choice('d', True)
+    question.add_choice('e', False)
+    return question
+
+def test_correct_choices_identification(questions):
+    correct_ids = questions._correct_choice_ids()
+
+    assert len(correct_ids) == 2
+    assert questions.choices[0].id in correct_ids 
+    assert questions.choices[3].id in correct_ids  
+
+    assert questions.choices[1].id not in correct_ids  
+    assert questions.choices[2].id not in correct_ids  
+    assert questions.choices[4].id not in correct_ids  
+
+def test_select_choices_with_max_selections(questions):
+    choice_ids = [choice.id for choice in questions.choices]
+
+    selected = questions.select_choices(choice_ids[:2])
+
+    assert len(selected) == 1
+    assert selected[0] == questions.choices[0].id  
+
+def test_changing_correct_choices(questions):
+    original_correct_ids = questions._correct_choice_ids()
+
+    new_correct_ids = [questions.choices[1].id, questions.choices[4].id]  
+
+    for choice in questions.choices:
+        choice.is_correct = False
+
+    questions.set_correct_choices(new_correct_ids)
+
+    updated_correct_ids = questions._correct_choice_ids()
+    assert len(updated_correct_ids) == 2
+    assert questions.choices[1].id in updated_correct_ids  
+    assert questions.choices[4].id in updated_correct_ids 
+    assert questions.choices[0].id not in updated_correct_ids  
+    assert questions.choices[3].id not in updated_correct_ids  
+
+    assert set(original_correct_ids) != set(updated_correct_ids)
