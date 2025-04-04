@@ -1,5 +1,5 @@
 import pytest
-from model import Question
+from model import Question, Choice
 
 
 def test_create_question():
@@ -34,3 +34,109 @@ def test_create_choice():
     assert len(question.choices) == 1
     assert choice.text == 'a'
     assert not choice.is_correct
+
+
+
+
+def test_add_multiple_choices():
+    question = Question(title='q1')
+    question.add_choice('a')
+    question.add_choice('b')
+    question.add_choice('c')
+
+    assert len(question.choices) == 3
+    assert [choice.text for choice in question.choices] == ['a', 'b', 'c']
+
+def test_remove_choice_by_id():
+    question = Question(title='q1')
+    choice1 = question.add_choice('a')
+    choice2 = question.add_choice('b')
+
+    question.remove_choice_by_id(choice1.id)
+
+    assert len(question.choices) == 1
+    assert question.choices[0].id == choice2.id
+
+def test_remove_all_choices():
+    question = Question(title='q1')
+    question.add_choice('a')
+    question.add_choice('b')
+    question.add_choice('c')
+
+    question.remove_all_choices()
+
+    assert len(question.choices) == 0
+
+def test_choice_ids_are_sequential():
+    question = Question(title='q1')
+    choice1 = question.add_choice('a')
+    choice2 = question.add_choice('b')
+    choice3 = question.add_choice('c')
+
+    assert choice1.id == 1
+    assert choice2.id == 2
+    assert choice3.id == 3
+
+def test_set_correct_choices():
+    question = Question(title='q1')
+    choice1 = question.add_choice('a')
+    choice2 = question.add_choice('b')
+    choice3 = question.add_choice('c')
+
+    question.set_correct_choices([choice1.id, choice3.id])
+
+    assert choice1.is_correct
+    assert not choice2.is_correct
+    assert choice3.is_correct
+
+def test_select_choices_returns_correct_selections():
+    question = Question(title='q1', max_selections=2)
+    choice1 = question.add_choice('a', True)
+    choice2 = question.add_choice('b', False)
+    question.add_choice('c', True)
+
+    selected = question.select_choices([choice1.id, choice2.id])
+
+    assert selected == [choice1.id]
+
+def test_max_selections_constraint():
+    question = Question(title='q1', max_selections=2)
+    choice1 = question.add_choice('a')
+    choice2 = question.add_choice('b')
+    choice3 = question.add_choice('c')
+
+    with pytest.raises(Exception) as excinfo:
+        question.select_choices([choice1.id, choice2.id, choice3.id])
+
+    assert "Cannot select more than 2 choices" in str(excinfo.value)
+
+def test_invalid_choice_id_raises_exception():
+    question = Question(title='q1')
+    question.add_choice('a')
+
+    with pytest.raises(Exception) as excinfo:
+        question.remove_choice_by_id(999)
+
+    assert "Invalid choice id 999" in str(excinfo.value)
+
+def test_choice_text_constraints():
+    question = Question(title='q1')
+
+    with pytest.raises(Exception):
+        question.add_choice('')
+
+    with pytest.raises(Exception):
+        question.add_choice('a' * 101)
+
+def test_question_points_constraints():
+    with pytest.raises(Exception):
+        Question(title='q1', points=0)
+
+    with pytest.raises(Exception):
+        Question(title='q1', points=101)
+
+    # Valid boundaries should work
+    question1 = Question(title='q1', points=1)
+    question2 = Question(title='q1', points=100)
+    assert question1.points == 1
+    assert question2.points == 100
